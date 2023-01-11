@@ -24,7 +24,6 @@ type result struct {
 	devEUI  string
 	id      uint64
 	success bool
-	isTaken bool
 }
 
 func CreateDevEUIs(batchSize int, resume bool) ([]string, error) {
@@ -131,8 +130,6 @@ func handleServerCommunication(requests <-chan uint64, results chan<- result) {
 		if err == nil {
 			if resp.StatusCode == http.StatusOK {
 				res.success = true
-			} else if resp.StatusCode == 422 {
-				res.isTaken = true
 			}
 		}
 		results <- res
