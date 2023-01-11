@@ -14,26 +14,26 @@ func main() {
 		Usage: "A cli application to generate new batches of devEUIs",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:    "resume",
-				Usage:   "Resume last incomplete run if present",
-				Value:   true,
-				Aliases: []string{"r"},
+				Name:    "discard",
+				Usage:   "Discard last incomplete run if present, instead of resuming",
+				Value:   false,
+				Aliases: []string{"d"},
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			var batchSize int64
 			var err error
 			if cCtx.Args().Get(0) == "" {
-				return fmt.Errorf("please provide a valid positive integer for batch size")
+				return fmt.Errorf("Please provide a valid positive integer for batch size")
 			}
 			batchSize, err = strconv.ParseInt(cCtx.Args().Get(0), 10, 64)
 			if err != nil {
 				panic(err)
 			}
 			if batchSize <= 0 {
-				return fmt.Errorf("please provide a valid positive integer for batch size")
+				return fmt.Errorf("Please provide a valid positive integer for batch size")
 			}
-			_, err = deveuigen.CreateDevEUIs(int(batchSize), cCtx.Bool("resume"))
+			_, err = deveuigen.CreateDevEUIs(int(batchSize), !cCtx.Bool("discard"))
 			return err
 		},
 	}

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
@@ -29,12 +30,12 @@ type result struct {
 func CreateDevEUIs(batchSize int, resume bool) ([]string, error) {
 	requests := make(chan uint64, maxConcurrentRequests)
 	results := make(chan result, maxConcurrentRequests)
-	store := NewIdStore()
 	for i := 0; i < maxConcurrentRequests; i++ {
 		go handleServerCommunication(requests, results)
 	}
-	success, failure := monitorProgress(store, requests, results, batchSize, resume)
-	log.Println("Success: ", success, "Failure: ", failure)
+	success, _ := monitorProgress(requests, results, batchSize, resume)
+	//log.Println("Success: ", success, "Failure: ", failure)
+	log.Printf("DevEUIs:\n%s\n", strings.Join(success, "\n"))
 	var err error = nil
 	if len(success) < batchSize {
 		err = fmt.Errorf("aborted")
@@ -42,7 +43,7 @@ func CreateDevEUIs(batchSize int, resume bool) ([]string, error) {
 	return success, err
 }
 
-func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan result, batchSize int, resume bool) (succeeded, failed []string) {
+func monitorProgress(requests chan<- uint64, results <-chan result, batchSize int, resume bool) (succeeded, failed []string) {
 	defer close(requests)
 
 	db, err := buntdb.Open("data.db")
@@ -55,16 +56,18 @@ func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan resu
 		panic(err)
 	}
 
-	bar := progressbar.Default(int64(batchSize), "generating")
+	store := NewIdStore()
 	if len(ids) > 0 {
 		if resume {
 			succeeded = ids
-			bar.Add(len(succeeded))
 			store.resetStore(succeeded)
+			fmt.Printf("Previous incomplete run found. Resuming...\n")
 		} else if err = discardPreviousRun(db); err != nil {
 			panic(err)
 		}
 	}
+	bar := progressbar.Default(int64(batchSize), "Generating")
+	bar.Add(len(succeeded))
 	activeRequestCount := 0
 	checkResult := func(r result) {
 		store.updateStore(r)
@@ -82,7 +85,7 @@ func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan resu
 	abort := false
 	wrapUp := func() {
 		if !abort {
-			bar.Describe("aborting")
+			bar.Describe("Aborting")
 			abort = true
 		}
 	}

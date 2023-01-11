@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/peterbourgon/diskv/v3 v3.0.1
 	github.com/schollz/progressbar/v3 v3.13.0
+	github.com/tidwall/buntdb v1.2.10
 	github.com/urfave/cli/v2 v2.23.7
 )
 
@@ -16,7 +17,6 @@ require (
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/tidwall/btree v1.4.2 // indirect
-	github.com/tidwall/buntdb v1.2.10 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
 	github.com/tidwall/grect v0.1.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
