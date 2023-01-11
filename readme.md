@@ -1,10 +1,10 @@
 ```
 $ ./euigen help
 NAME:
-   euigen - A cli application to generate new batches of devEUIs
+   euigen - A cli application to generate a new batch of N devEUIs
 
 USAGE:
-   euigen [global options] command [command options] [arguments...]
+   euigen [-d] N
 
 COMMANDS:
    help, h  Shows a list of commands or help for one command
@@ -12,7 +12,6 @@ COMMANDS:
 GLOBAL OPTIONS:
    --discard, -d  Discard last incomplete run if present, instead of resuming (default: false)
    --help, -h     show help (default: false)
-
 ```
 # Usage
 ```

@@ -10,8 +10,9 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name:  "euigen",
-		Usage: "A cli application to generate new batches of devEUIs",
+		Name:      "euigen",
+		Usage:     "A cli application to generate a new batch of N devEUIs",
+		UsageText: "euigen [-d] N",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:    "discard",
