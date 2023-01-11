@@ -2,11 +2,10 @@ package main
 
 import (
 	"deveui-gen-cli/deveui"
-	"log"
+	"fmt"
+	"github.com/urfave/cli/v2"
 	"os"
 	"strconv"
-
-	"github.com/urfave/cli/v2"
 )
 
 func main() {
@@ -18,16 +17,28 @@ func main() {
 				Name:    "generate",
 				Aliases: []string{"gen"},
 				Usage:   "generate a batch of N devEUIs",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "discard",
+						Usage:   "Discard last incomplete run. Incomplete runs are resumed by default",
+						Value:   false,
+						Aliases: []string{"d"},
+					},
+				},
 				Action: func(cCtx *cli.Context) error {
-					var batchSize int64 = 10
+					var batchSize int64
 					var err error
-					if cCtx.Args().Get(0) != "" {
-						batchSize, err = strconv.ParseInt(cCtx.Args().Get(0), 10, 64)
-						if err != nil {
-							panic(err)
-						}
+					if cCtx.Args().Get(0) == "" {
+						return fmt.Errorf("please provide a valid positive integer for batch size")
 					}
-					_, err = deveui.CreateDevEUIs(int(batchSize))
+					batchSize, err = strconv.ParseInt(cCtx.Args().Get(0), 10, 64)
+					if err != nil {
+						panic(err)
+					}
+					if batchSize <= 0 {
+						return fmt.Errorf("please provide a valid positive integer for batch size")
+					}
+					_, err = deveui.CreateDevEUIs(int(batchSize), cCtx.Bool("discard"))
 					return err
 				},
 			},
@@ -35,6 +46,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 }
