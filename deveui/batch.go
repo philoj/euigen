@@ -2,6 +2,7 @@ package deveui
 
 import (
 	"fmt"
+	"github.com/schollz/progressbar/v3"
 	"log"
 	"os"
 	"os/signal"
@@ -38,10 +39,12 @@ func monitorProgress(requests chan string, results chan result, batchSize int) (
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	defer close(requests)
 	activeRequestCount := 0
+	bar := progressbar.Default(int64(batchSize), "generating")
 	checkResult := func(r result) {
 		activeRequestCount--
 		if r.success {
 			success = append(success, r.devEUI)
+			bar.Add(1)
 		} else {
 			failure = append(failure, r.devEUI)
 		}
@@ -50,7 +53,7 @@ func monitorProgress(requests chan string, results chan result, batchSize int) (
 	abort := false
 	wrapUp := func() {
 		if !abort {
-			log.Println("Aborting", activeRequestCount, batchSize-len(success))
+			bar.Describe("aborting")
 			abort = true
 		}
 	}
@@ -87,7 +90,6 @@ func monitorProgress(requests chan string, results chan result, batchSize int) (
 func handleServerCommunication(requests chan string, results chan result) {
 	for {
 		eui := <-requests
-		log.Println("Requesting", eui)
 		results <- result{
 			devEUI:  eui,
 			success: requestNewEUI(eui) == nil,

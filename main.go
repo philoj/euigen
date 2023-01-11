@@ -27,7 +27,6 @@ func main() {
 							panic(err)
 						}
 					}
-					log.Printf("generating %d devEUIs\n", batchSize)
 					_, err = deveui.CreateDevEUIs(int(batchSize))
 					return err
 				},
