@@ -23,14 +23,14 @@ type result struct {
 	isTaken bool
 }
 
-func CreateDevEUIs(batchSize int, discard bool) ([]string, error) {
+func CreateDevEUIs(batchSize int, resume bool) ([]string, error) {
 	requests := make(chan uint64, maxConcurrentRequests)
 	results := make(chan result, maxConcurrentRequests)
 	store := NewIdStore()
 	for i := 0; i < maxConcurrentRequests; i++ {
 		go handleServerCommunication(requests, results)
 	}
-	success, failure := monitorProgress(store, requests, results, batchSize, discard)
+	success, failure := monitorProgress(store, requests, results, batchSize, resume)
 	log.Println("Success: ", success, "Failure: ", failure)
 	var err error = nil
 	if len(success) < batchSize {
@@ -39,7 +39,7 @@ func CreateDevEUIs(batchSize int, discard bool) ([]string, error) {
 	return success, err
 }
 
-func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan result, batchSize int, discard bool) (succeeded, failed []string) {
+func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan result, batchSize int, resume bool) (succeeded, failed []string) {
 	defer close(requests)
 
 	db, err := buntdb.Open("data.db")
@@ -54,14 +54,12 @@ func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan resu
 
 	bar := progressbar.Default(int64(batchSize), "generating")
 	if len(ids) > 0 {
-		if discard {
-			if err = discardPreviousRun(db); err != nil {
-				panic(err)
-			}
-		} else {
+		if resume {
 			succeeded = ids
 			bar.Add(len(succeeded))
 			store.resetStore(succeeded)
+		} else if err = discardPreviousRun(db); err != nil {
+			panic(err)
 		}
 	}
 	activeRequestCount := 0
