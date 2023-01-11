@@ -1,39 +1,41 @@
 package deveui
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
-func requestNewEUI(eui string) error {
-	req, err := json.Marshal(map[string]string{
-		"deveui": eui,
-	})
-	if err != nil {
-		return err
-	}
-	resp, err := http.Post("http://localhost:8090/sensor-onboarding-sample", "application/json", bytes.NewReader(req))
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned status %d", resp.StatusCode)
-	}
-	return nil
+const (
+	maxConcurrentRequests = 5 // TODO move to env
+	failureThreshold      = 5 // TODO move to env
+)
+
+type result struct {
+	devEUI  string
+	success bool
 }
 
-func generateEUI() string {
-	eui, err := generateHexString(5)
-	if err != nil {
-		panic(err)
+func CreateDevEUIs(batchSize int) ([]string, error) {
+	requests := make(chan string, maxConcurrentRequests)
+	results := make(chan result, maxConcurrentRequests)
+	for i := 0; i < maxConcurrentRequests; i++ {
+		go handleServerCommunication(requests, results)
 	}
-	return eui
+	success, failure := monitorProgress(requests, results, batchSize)
+	log.Println("Success: ", success, "Failure: ", failure)
+	var err error = nil
+	if len(success) < batchSize {
+		err = fmt.Errorf("aborted")
+	}
+	return success, err
 }
 
-func spawnNewRequests(requests chan string, results chan result, batchSize int) (success, failure []string) {
+func monitorProgress(requests chan string, results chan result, batchSize int) (success, failure []string) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	defer close(requests)
 	activeRequestCount := 0
 	checkResult := func(r result) {
@@ -45,15 +47,28 @@ func spawnNewRequests(requests chan string, results chan result, batchSize int) 
 		}
 	}
 
+	abort := false
+	wrapUp := func() {
+		if !abort {
+			log.Println("Aborting", activeRequestCount, batchSize-len(success))
+			abort = true
+		}
+	}
+
 	for {
-		if len(success) >= batchSize || len(failure) >= failureThreshold*batchSize {
+		if len(success) >= batchSize || (abort && activeRequestCount == 0) || len(failure) >= failureThreshold*batchSize {
 			// Exit
 			return
 		}
-		if activeRequestCount > 0 && batchSize > 0 &&
-			(activeRequestCount == maxConcurrentRequests || activeRequestCount+len(success) == batchSize) {
-			// Wait for active requests to complete before spawning new requests
-			checkResult(<-results)
+		if abort || (activeRequestCount > 0 && batchSize > 0 &&
+			(activeRequestCount == maxConcurrentRequests || activeRequestCount+len(success) == batchSize)) {
+			// Wait for active requests to complete without spawning new requests
+			select {
+			case r := <-results:
+				checkResult(r)
+			case <-sigs:
+				wrapUp()
+			}
 			continue
 		}
 
@@ -63,37 +78,19 @@ func spawnNewRequests(requests chan string, results chan result, batchSize int) 
 			checkResult(r)
 		case requests <- generateEUI():
 			activeRequestCount++
+		case <-sigs:
+			wrapUp()
 		}
 	}
 }
 
-func handleRequests(requests chan string, results chan result) {
+func handleServerCommunication(requests chan string, results chan result) {
 	for {
 		eui := <-requests
+		log.Println("Requesting", eui)
 		results <- result{
 			devEUI:  eui,
 			success: requestNewEUI(eui) == nil,
 		}
 	}
-}
-
-const maxConcurrentRequests = 5
-const failureThreshold = 5
-
-type result struct {
-	devEUI  string
-	success bool
-}
-
-func BatchRequest(batchSize int) ([]string, error) {
-	requests := make(chan string, maxConcurrentRequests)
-	results := make(chan result, maxConcurrentRequests)
-	go handleRequests(requests, results)
-	success, failure := spawnNewRequests(requests, results, batchSize)
-	log.Println("Success: ", success, "Failure: ", failure)
-	var err error = nil
-	if len(success) < batchSize {
-		err = fmt.Errorf("aborted when failures exceeded threshold")
-	}
-	return success, err
 }
