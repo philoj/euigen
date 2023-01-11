@@ -1,4 +1,4 @@
-package deveui
+package deveuigen
 
 import (
 	"crypto/rand"

@@ -1,4 +1,4 @@
-package deveui
+package deveuigen
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 
 func requestNewEUI(eui string) (*http.Response, error) {
 	req, err := json.Marshal(map[string]string{
-		"deveui": eui,
+		"deveuigen": eui,
 	})
 	if err != nil {
 		return nil, err

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deveui-gen-cli/deveui"
+	"deveui-gen-cli/deveuigen"
 	"fmt"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -33,7 +33,7 @@ func main() {
 			if batchSize <= 0 {
 				return fmt.Errorf("please provide a valid positive integer for batch size")
 			}
-			_, err = deveui.CreateDevEUIs(int(batchSize), cCtx.Bool("resume"))
+			_, err = deveuigen.CreateDevEUIs(int(batchSize), cCtx.Bool("resume"))
 			return err
 		},
 	}

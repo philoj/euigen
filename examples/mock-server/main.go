@@ -12,7 +12,7 @@ import (
 )
 
 type SensorOnboardingRequest struct {
-	DevEUI string `json:"deveui"`
+	DevEUI string `json:"deveuigen"`
 }
 
 var d *diskv.Diskv
