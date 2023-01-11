@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +18,7 @@ const (
 type result struct {
 	devEUI  string
 	success bool
+	isTaken bool
 }
 
 func CreateDevEUIs(batchSize int) ([]string, error) {
@@ -90,9 +92,15 @@ func monitorProgress(requests chan string, results chan result, batchSize int) (
 func handleServerCommunication(requests chan string, results chan result) {
 	for {
 		eui := <-requests
-		results <- result{
-			devEUI:  eui,
-			success: requestNewEUI(eui) == nil,
+		res := result{devEUI: eui}
+		resp, err := requestNewEUI(eui)
+		if err == nil {
+			if resp.StatusCode == http.StatusOK {
+				res.success = true
+			} else if resp.StatusCode == 422 {
+				res.isTaken = true
+			}
 		}
+		results <- res
 	}
 }

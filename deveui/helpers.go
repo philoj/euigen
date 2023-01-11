@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"net/http"
 )
@@ -37,19 +36,12 @@ func generateEUI() string {
 	return eui
 }
 
-func requestNewEUI(eui string) error {
+func requestNewEUI(eui string) (*http.Response, error) {
 	req, err := json.Marshal(map[string]string{
 		"deveui": eui,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	resp, err := http.Post("http://localhost:8090/sensor-onboarding-sample", "application/json", bytes.NewReader(req)) // TODO move url to env
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned status %d", resp.StatusCode)
-	}
-	return nil
+	return http.Post("http://localhost:8090/sensor-onboarding-sample", "application/json", bytes.NewReader(req)) // TODO move url to env
 }
