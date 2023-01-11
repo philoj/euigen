@@ -2,39 +2,9 @@ package deveui
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
-	"math/big"
 	"net/http"
 )
-
-const (
-	allowedChars = "ABCDEF0123456789"
-	devEUISize   = 5 // TODO change this or move to env
-)
-
-func generateHexString(length int) (string, error) {
-	// TODO better generation
-	// TODO batch-wise uniqueness
-	max := big.NewInt(int64(len(allowedChars)))
-	b := make([]byte, length)
-	for i := range b {
-		n, err := rand.Int(rand.Reader, max)
-		if err != nil {
-			return "", err
-		}
-		b[i] = allowedChars[n.Int64()]
-	}
-	return string(b), nil
-}
-
-func generateEUI() string {
-	eui, err := generateHexString(devEUISize)
-	if err != nil {
-		panic(err)
-	}
-	return eui
-}
 
 func requestNewEUI(eui string) (*http.Response, error) {
 	req, err := json.Marshal(map[string]string{

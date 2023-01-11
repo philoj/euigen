@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/peterbourgon/diskv/v3"
+	"github.com/peterbourgon/diskv/v3" // todo use buntdb
 )
 
 type SensorOnboardingRequest struct {

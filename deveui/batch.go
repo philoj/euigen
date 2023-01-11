@@ -18,17 +18,19 @@ const (
 
 type result struct {
 	devEUI  string
+	id      uint64
 	success bool
 	isTaken bool
 }
 
 func CreateDevEUIs(batchSize int, discard bool) ([]string, error) {
-	requests := make(chan string, maxConcurrentRequests)
+	requests := make(chan uint64, maxConcurrentRequests)
 	results := make(chan result, maxConcurrentRequests)
+	store := NewIdStore()
 	for i := 0; i < maxConcurrentRequests; i++ {
 		go handleServerCommunication(requests, results)
 	}
-	success, failure := monitorProgress(requests, results, batchSize, discard)
+	success, failure := monitorProgress(store, requests, results, batchSize, discard)
 	log.Println("Success: ", success, "Failure: ", failure)
 	var err error = nil
 	if len(success) < batchSize {
@@ -37,7 +39,7 @@ func CreateDevEUIs(batchSize int, discard bool) ([]string, error) {
 	return success, err
 }
 
-func monitorProgress(requests chan string, results chan result, batchSize int, discard bool) (succeeded, failed []string) {
+func monitorProgress(store *IdStore, requests chan<- uint64, results <-chan result, batchSize int, discard bool) (succeeded, failed []string) {
 	defer close(requests)
 
 	db, err := buntdb.Open("data.db")
@@ -59,10 +61,12 @@ func monitorProgress(requests chan string, results chan result, batchSize int, d
 		} else {
 			succeeded = ids
 			bar.Add(len(succeeded))
+			store.resetStore(succeeded)
 		}
 	}
 	activeRequestCount := 0
 	checkResult := func(r result) {
+		store.updateStore(r)
 		activeRequestCount--
 		if r.success {
 			succeeded = append(succeeded, r.devEUI)
@@ -106,7 +110,7 @@ func monitorProgress(requests chan string, results chan result, batchSize int, d
 		select {
 		case r := <-results:
 			checkResult(r)
-		case requests <- generateEUI():
+		case requests <- store.generate():
 			activeRequestCount++
 		case <-sigs:
 			wrapUp()
@@ -114,14 +118,14 @@ func monitorProgress(requests chan string, results chan result, batchSize int, d
 	}
 }
 
-func handleServerCommunication(requests chan string, results chan result) {
+func handleServerCommunication(requests <-chan uint64, results chan<- result) {
 	for {
-		eui, open := <-requests
+		id, open := <-requests
 		if !open {
 			return
 		}
-		res := result{devEUI: eui}
-		resp, err := requestNewEUI(eui)
+		res := result{id: id, devEUI: fmt.Sprintf("%016X", id)}
+		resp, err := requestNewEUI(res.devEUI)
 		if err == nil {
 			if resp.StatusCode == http.StatusOK {
 				res.success = true
