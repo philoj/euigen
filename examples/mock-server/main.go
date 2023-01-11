@@ -61,7 +61,7 @@ func sensorOnboarding(w http.ResponseWriter, req *http.Request) {
 	delay := time.Duration(float64(rd) / float64(1<<63) * float64(maxDelay))
 	log.Println("delay: ", delay, float64(rd), float64(1<<63), float64(rd)/(2^64))
 	time.Sleep(delay)
-	if _, err := d.Read(request.DevEUI); err == nil {
+	if _, err := d.Read(request.DevEUI); err == nil { // TODO also fail randomly
 		log.Println("devEUI already taken: ", request.DevEUI)
 		w.WriteHeader(422)
 		return

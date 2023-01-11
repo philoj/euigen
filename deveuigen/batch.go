@@ -1,6 +1,8 @@
 package deveuigen
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"github.com/tidwall/buntdb"
@@ -12,8 +14,10 @@ import (
 )
 
 const (
-	maxConcurrentRequests = 5 // TODO move to env
-	failureThreshold      = 5 // TODO move to env
+	maxConcurrentRequests = 10 // TODO move to env
+	failureThreshold      = 5  // TODO move to env
+	//apiUrl                = "http://localhost:8090/sensor-onboarding-sample" // mock server is in examples dir
+	apiUrl = "https://europe-west1-machinemax-dev-d524.cloudfunctions.net/sensor-onboarding-sample" // TODO move to env
 )
 
 type result struct {
@@ -133,4 +137,14 @@ func handleServerCommunication(requests <-chan uint64, results chan<- result) {
 		}
 		results <- res
 	}
+}
+
+func requestNewEUI(eui string) (*http.Response, error) {
+	req, err := json.Marshal(map[string]string{
+		"deveuigen": eui,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return http.Post(apiUrl, "application/json", bytes.NewReader(req)) // TODO move url to env
 }

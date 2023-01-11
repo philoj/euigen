@@ -13,7 +13,7 @@ type IdStore struct {
 }
 
 func (s *IdStore) generate() uint64 {
-	max := new(big.Int).SetUint64(uint64(1<<64 - 1)) // 16 digit hex: [0,2^64)
+	max := new(big.Int).SetUint64(uint64(1<<(4*16) - 1)) // 16 digit hex: [0,16^16)
 	for {
 		randId, err := rand.Int(rand.Reader, max)
 		if err != nil {
@@ -59,7 +59,7 @@ func (s *IdStore) isValid(id uint64) bool {
 }
 
 func last5HexDigits(id uint64) uint64 {
-	return id & uint64(1<<20-1) // last five hex digits, 2^20
+	return id & uint64(1<<(4*5)-1) // last five hex digits, 16^5
 }
 
 func NewIdStore() *IdStore {
